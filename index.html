@@ -256,7 +256,7 @@
 </div>
 
 <script>
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQNfwk5Vi5pcZ-kDIuPZjkxKoWB2do89G56LUQDWm_2YIPlOoEV_kD7q-dGQjmB4jQ4Fg0KTSNI9acQ/pub?output=csv';
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQNfwk5Vi5pcZ-kDIuPZjkxKoWB2do89G56LUQDWm_2YIPlOoEV_kD7q-dGQjmB4jQ4Fg0KTSNI9acQ/pub?gid=0&single=true&output=csv';
 
 const STATUS_COLOR = {
   '契約済':   '#34d399',
@@ -481,9 +481,14 @@ document.getElementById('addr-input').addEventListener('keydown', e => {
 });
 
 // ── Load CSV ─────────────────────────────────────────────────────────────
-Papa.parse(CSV_URL, {
-  download: true, header: true, skipEmptyLines: true,
-  complete({ data }) {
+fetch(CSV_URL)
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  })
+  .then(csvText => {
+    const result = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    const data = result.data;
     allData = data.map((row, i) => ({ ...row, _id: String(row['ID'] || i) }));
 
     allData.forEach(row => {
@@ -509,12 +514,11 @@ Papa.parse(CSV_URL, {
 
     render();
     document.getElementById('loading').classList.add('hide');
-  },
-  error(err) {
+  })
+  .catch(err => {
     document.getElementById('loading').innerHTML =
       `<p style="color:#f87171">データ読み込み失敗：${err.message}</p>`;
-  }
-});
+  });
 
 // ── Keyword search ────────────────────────────────────────────────────────
 document.getElementById('kw-search').addEventListener('input', e => {
