@@ -431,7 +431,7 @@ function distLabel(km) { return km < 1 ? `${Math.round(km*1000)} m` : `${km.toFi
 
 // ── Popup ─────────────────────────────────────────────────────────────────
 function popupHTML(row) {
-  const addr = [row['郵便番号'] ? '〒'+row['郵便番号'] : '', row['住所']].filter(Boolean).join(' ');
+  const addr = [row['郵便番号'] ? '〒'+row['郵便番号'] : '', row['Address']].filter(Boolean).join(' ');
 
   // 求人原稿：営業所固有 > 会社レベル
   const recruitUrl = row['depot_求人原稿'] || row['co_求人原稿'];
@@ -513,7 +513,7 @@ function render() {
           <div class="item-top">${distHtml}${catHtml}</div>
           <div class="item-company">${row['会社名']||''}</div>
           <div class="item-name">${row['営業所名']||'（名称不明）'}</div>
-          <div class="item-addr">${row['住所']||''}</div>
+          <div class="item-addr">${row['Address']||''}</div>
         </div>
       </div>`;
     }).join('');
@@ -629,7 +629,7 @@ async function loadData() {
       'CompanyID':    companyId,
       '営業所名':     depot['営業所名'],
       '郵便番号':     depot['郵便番号'],
-      '住所':         depot['住所'],
+      'Address':       depot['Address'],
       'Latitude':     depot['Latitude'],
       'Longitude':    depot['Longitude'],
       'depot_メモ':   depot['メモ'],
