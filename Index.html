@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>バス会社営業所マップ</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --border:   #2a2d3e;
+      --text:     #e8eaf0;
+      --muted:    #6b7080;
+      --accent:   #4f7cff;
+      --c-signed: #34d399;
+      --c-talk:   #fbbf24;
+      --c-none:   #94a3b8;
+      --c-stop:   #f87171;
+      --sidebar-w: 320px;
+      --header-h:  104px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      background: var(--bg); color: var(--text); overflow: hidden;
+    }
+
+    /* ═══ HEADER ═══════════════════════════════════════════════════ */
+    header {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      z-index: 1000; padding: 0 20px;
+    }
+
+    .header-row1 {
+      height: 52px; display: flex; align-items: center; gap: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-row1 h1 { font-size: 15px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
+    .header-row1 h1 span { color: var(--accent); }
+
+    .kw-wrap { position: relative; flex: 1; max-width: 280px; }
+    .kw-wrap input {
+      width: 100%; padding: 6px 10px 6px 30px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 13px; outline: none; transition: border-color .2s;
+    }
+    .kw-wrap input:focus { border-color: var(--accent); }
+    .kw-wrap .ico { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
+
+    .filter-group { display: flex; gap: 6px; margin-left: auto; }
+    .filter-btn {
+      padding: 4px 11px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      border: 1.5px solid transparent; cursor: pointer; transition: all .2s; background: var(--bg);
+    }
+    .filter-btn[data-status="all"]      { border-color: var(--muted);    color: var(--muted); }
+    .filter-btn[data-status="契約済"]   { border-color: var(--c-signed); color: var(--c-signed); }
+    .filter-btn[data-status="商談中"]   { border-color: var(--c-talk);   color: var(--c-talk); }
+    .filter-btn[data-status="未接触"]   { border-color: var(--c-none);   color: var(--c-none); }
+    .filter-btn[data-status="取引停止"] { border-color: var(--c-stop);   color: var(--c-stop); }
+    .filter-btn[data-status="all"].active      { background: var(--muted);    color: #fff; border-color: var(--muted); }
+    .filter-btn[data-status="契約済"].active   { background: var(--c-signed); color: #fff; }
+    .filter-btn[data-status="商談中"].active   { background: var(--c-talk);   color: #fff; }
+    .filter-btn[data-status="未接触"].active   { background: var(--c-none);   color: #fff; }
+    .filter-btn[data-status="取引停止"].active { background: var(--c-stop);   color: #fff; }
+
+    .header-row2 {
+      height: 48px; display: flex; align-items: center; gap: 10px;
+    }
+    .addr-label { font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; letter-spacing: .06em; }
+    .addr-wrap { position: relative; flex: 1; max-width: 480px; }
+    .addr-wrap input {
+      width: 100%; padding: 7px 12px 7px 32px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 13px; outline: none; transition: border-color .2s;
+    }
+    .addr-wrap input:focus { border-color: var(--accent); }
+    .addr-wrap input::placeholder { color: var(--muted); }
+    .addr-wrap .ico { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; pointer-events: none; }
+
+    #addr-btn {
+      padding: 7px 16px; background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: opacity .2s;
+    }
+    #addr-btn:hover { opacity: .85; }
+    #addr-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    #addr-status { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    #addr-status.error { color: var(--c-stop); }
+    #addr-status.ok    { color: var(--c-signed); }
+
+    /* ═══ LAYOUT ══════════════════════════════════════════════════ */
+    .app { display: flex; height: 100vh; padding-top: var(--header-h); }
+
+    /* ═══ SIDEBAR ════════════════════════════════════════════════ */
+    aside {
+      width: var(--sidebar-w); flex-shrink: 0;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 12px 16px 10px; border-bottom: 1px solid var(--border);
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      color: var(--muted); text-transform: uppercase;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .count-badge {
+      background: var(--accent); color: #fff;
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+    }
+    .list { flex: 1; overflow-y: auto; }
+    .list::-webkit-scrollbar { width: 4px; }
+    .list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .list-item {
+      padding: 11px 14px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .15s;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .list-item:hover  { background: rgba(79,124,255,.08); }
+    .list-item.active { background: rgba(79,124,255,.16); }
+
+    .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+    .dot.契約済   { background: var(--c-signed); }
+    .dot.商談中   { background: var(--c-talk); }
+    .dot.未接触   { background: var(--c-none); }
+    .dot.取引停止 { background: var(--c-stop); }
+
+    .item-info { min-width: 0; }
+    .item-dist    { font-size: 10px; color: var(--accent); font-weight: 700; margin-bottom: 1px; }
+    .item-company { font-size: 11px; color: var(--muted); margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-name    { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-addr    { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ═══ MAP ════════════════════════════════════════════════════ */
+    #map { flex: 1; }
+
+    .home-pin {
+      width: 22px; height: 22px; background: var(--accent);
+      border-radius: 50%; border: 3px solid #fff;
+      box-shadow: 0 0 0 3px rgba(79,124,255,.4), 0 2px 8px rgba(0,0,0,.5);
+    }
+
+    /* ═══ POPUP ══════════════════════════════════════════════════ */
+    .leaflet-popup-content-wrapper {
+      background: var(--surface) !important; border: 1px solid var(--border) !important;
+      border-radius: 12px !important; box-shadow: 0 8px 32px rgba(0,0,0,.5) !important;
+      color: var(--text) !important; padding: 0 !important;
+    }
+    .leaflet-popup-tip { background: var(--surface) !important; }
+    .leaflet-popup-content { margin: 0 !important; width: 280px !important; }
+
+    .popup-inner { padding: 16px; }
+    .popup-status {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px; margin-bottom: 10px;
+    }
+    .popup-status.契約済   { background: rgba(52,211,153,.15);  color: var(--c-signed); }
+    .popup-status.商談中   { background: rgba(251,191,36,.15);   color: var(--c-talk); }
+    .popup-status.未接触   { background: rgba(148,163,184,.15);  color: var(--c-none); }
+    .popup-status.取引停止 { background: rgba(248,113,113,.15);  color: var(--c-stop); }
+
+    .popup-company { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+    .popup-name    { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .popup-addr    { font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+    .popup-dist    { font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+
+    .popup-links { display: flex; gap: 8px; margin-bottom: 12px; }
+    .popup-link {
+      flex: 1; padding: 7px 10px; border-radius: 8px; text-align: center;
+      font-size: 12px; font-weight: 600; text-decoration: none;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); transition: border-color .2s, color .2s;
+    }
+    .popup-link:hover { border-color: var(--accent); color: var(--accent); }
+    .popup-link.disabled { opacity: .35; pointer-events: none; }
+
+    .popup-memo { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+    .popup-memo-label { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+
+    /* ═══ LOADING ═════════════════════════════════════════════════ */
+    #loading {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 9999; gap: 16px; transition: opacity .4s;
+    }
+    #loading.hide { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { font-size: 13px; color: var(--muted); }
+
+    .empty { padding: 32px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    .marker-pin {
+      width: 26px; height: 26px; border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg); border: 2px solid rgba(255,255,255,.25);
+      box-shadow: 0 2px 8px rgba(0,0,0,.4);
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>データを読み込み中...</p>
+</div>
+
+<header>
+  <div class="header-row1">
+    <h1>🚌 <span>バス会社</span>営業所マップ</h1>
+    <div class="kw-wrap">
+      <span class="ico">🔍</span>
+      <input id="kw-search" type="text" placeholder="会社名・営業所名で検索" />
+    </div>
+    <div class="filter-group">
+      <button class="filter-btn active" data-status="all">すべて</button>
+      <button class="filter-btn" data-status="契約済">契約済</button>
+      <button class="filter-btn" data-status="商談中">商談中</button>
+      <button class="filter-btn" data-status="未接触">未接触</button>
+      <button class="filter-btn" data-status="取引停止">取引停止</button>
+    </div>
+  </div>
+  <div class="header-row2">
+    <span class="addr-label">📍 求職者住所</span>
+    <div class="addr-wrap">
+      <span class="ico">🏠</span>
+      <input id="addr-input" type="text" placeholder="例：大阪府大阪市北区梅田1丁目" />
+    </div>
+    <button id="addr-btn">地図で表示</button>
+    <span id="addr-status"></span>
+  </div>
+</header>
+
+<div class="app">
+  <aside>
+    <div class="sidebar-header">
+      営業所一覧
+      <span class="count-badge" id="count">0</span>
+    </div>
+    <div class="list" id="list"></div>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/1WEmuM_V13bgh-mtX2MP90uajWLkeo4PLex8-5nN58KE/gviz/tq?tqx=out:csv&sheet=Sheet1';
+
+const STATUS_COLOR = {
+  '契約済':   '#34d399',
+  '商談中':   '#fbbf24',
+  '未接触':   '#94a3b8',
+  '取引停止': '#f87171',
+};
+
+// ── Map ──────────────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: false }).setView([36.5, 136.0], 6);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom: 19,
+}).addTo(map);
+
+// ── State ────────────────────────────────────────────────────────────────
+let allData      = [];
+let markers      = {};
+let activeFilter = 'all';
+let activeKw     = '';
+let activeId     = null;
+let homeLatLng   = null;
+let homeMarker   = null;
+let homeCircle   = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+function makeIcon(status) {
+  const color = STATUS_COLOR[status] || '#94a3b8';
+  return L.divIcon({
+    className: '',
+    html: `<div class="marker-pin" style="background:${color}"></div>`,
+    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -28],
+  });
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function distLabel(km) {
+  return km < 1 ? `${Math.round(km*1000)} m` : `${km.toFixed(1)} km`;
+}
+
+// ── Popup ────────────────────────────────────────────────────────────────
+function popupHTML(row) {
+  const addr = [row['郵便番号'] ? '〒'+row['郵便番号'] : '', row['住所']].filter(Boolean).join(' ');
+  const site = row['公式サイト']
+    ? `<a class="popup-link" href="${row['公式サイト']}" target="_blank" rel="noopener">🌐 公式サイト</a>`
+    : `<span class="popup-link disabled">🌐 公式サイト</span>`;
+  const recruit = row['採用ページ']
+    ? `<a class="popup-link" href="${row['採用ページ']}" target="_blank" rel="noopener">📋 採用ページ</a>`
+    : `<span class="popup-link disabled">📋 採用ページ</span>`;
+  const memo = row['メモ']
+    ? `<div class="popup-memo"><div class="popup-memo-label">メモ</div>${row['メモ']}</div>` : '';
+
+  let distHtml = '';
+  if (homeLatLng) {
+    const lat = parseFloat(row['Latitude']), lng = parseFloat(row['Longitude']);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      const km = haversineKm(homeLatLng.lat, homeLatLng.lng, lat, lng);
+      distHtml = `<div class="popup-dist">📍 求職者住所から ${distLabel(km)}</div>`;
+    }
+  }
+
+  return `<div class="popup-inner">
+    <div class="popup-status ${row['契約状態']}"><span>●</span>${row['契約状態']||'未設定'}</div>
+    <div class="popup-company">${row['会社名']||''}</div>
+    <div class="popup-name">${row['営業所名']||'（名称不明）'}</div>
+    <div class="popup-addr">${addr}</div>
+    ${distHtml}
+    <div class="popup-links">${site}${recruit}</div>
+    ${memo}
+  </div>`;
+}
+
+// ── Filtered & sorted data ────────────────────────────────────────────────
+function filtered() {
+  let rows = allData.filter(row => {
+    const matchStatus = activeFilter === 'all' || row['契約状態'] === activeFilter;
+    const q = activeKw.toLowerCase();
+    const matchKw = !q ||
+      (row['会社名']||'').toLowerCase().includes(q) ||
+      (row['営業所名']||'').toLowerCase().includes(q);
+    const hasCoords = !isNaN(parseFloat(row['Latitude'])) && !isNaN(parseFloat(row['Longitude']));
+    return matchStatus && matchKw && hasCoords;
+  });
+
+  if (homeLatLng) {
+    rows = rows.map(row => ({
+      ...row,
+      _km: haversineKm(homeLatLng.lat, homeLatLng.lng, parseFloat(row['Latitude']), parseFloat(row['Longitude']))
+    })).sort((a, b) => a._km - b._km);
+  }
+
+  return rows;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function render() {
+  const rows = filtered();
+  document.getElementById('count').textContent = rows.length;
+
+  const list = document.getElementById('list');
+  if (rows.length === 0) {
+    list.innerHTML = '<div class="empty">該当する営業所がありません</div>';
+  } else {
+    list.innerHTML = rows.map(row => {
+      const distHtml = (homeLatLng && row._km != null)
+        ? `<div class="item-dist">📍 ${distLabel(row._km)}</div>` : '';
+      const isActive = row._id === activeId;
+      return `<div class="list-item${isActive ? ' active' : ''}" data-id="${row._id}">
+        <div class="dot ${row['契約状態']}"></div>
+        <div class="item-info">
+          ${distHtml}
+          <div class="item-company">${row['会社名']||''}</div>
+          <div class="item-name">${row['営業所名']||'（名称不明）'}</div>
+          <div class="item-addr">${row['住所']||''}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // ✅ Attach click listeners every time after innerHTML rebuild
+    list.querySelectorAll('.list-item').forEach(el => {
+      el.addEventListener('click', () => focusMarker(el.dataset.id));
+    });
+  }
+
+  // Show/hide markers based on filter
+  const visibleIds = new Set(rows.map(r => r._id));
+  Object.entries(markers).forEach(([id, m]) => {
+    if (visibleIds.has(id)) {
+      if (!map.hasLayer(m)) m.addTo(map);
+    } else {
+      if (map.hasLayer(m)) map.removeLayer(m);
+    }
+  });
+
+  // Refresh popup content (distance label updates after geocode)
+  Object.entries(markers).forEach(([id, m]) => {
+    const row = allData.find(r => r._id === id);
+    if (row) m.setPopupContent(popupHTML(row));
+  });
+}
+
+// ── Focus a marker ────────────────────────────────────────────────────────
+function focusMarker(id) {
+  activeId = id;
+  const marker = markers[id];
+  if (!marker) return;
+  map.setView(marker.getLatLng(), 14, { animate: true });
+  marker.openPopup();
+  render();
+  setTimeout(() => {
+    const el = document.querySelector(`.list-item[data-id="${id}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+// ── Geocode (Nominatim) ───────────────────────────────────────────────────
+async function geocodeAddress(address) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}&countrycodes=jp`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'ja' } });
+  const data = await res.json();
+  if (!data.length) throw new Error('住所が見つかりませんでした');
+  return L.latLng(parseFloat(data[0].lat), parseFloat(data[0].lon));
+}
+
+document.getElementById('addr-btn').addEventListener('click', async () => {
+  const input = document.getElementById('addr-input').value.trim();
+  if (!input) return;
+
+  const btn    = document.getElementById('addr-btn');
+  const status = document.getElementById('addr-status');
+  btn.disabled = true;
+  btn.textContent = '検索中...';
+  status.textContent = '';
+  status.className = '';
+
+  try {
+    const latlng = await geocodeAddress(input);
+    homeLatLng = latlng;
+
+    if (homeMarker) map.removeLayer(homeMarker);
+    if (homeCircle) map.removeLayer(homeCircle);
+
+    homeMarker = L.marker(latlng, {
+      icon: L.divIcon({
+        className: '',
+        html: '<div class="home-pin"></div>',
+        iconSize: [22, 22], iconAnchor: [11, 11],
+      }),
+      zIndexOffset: 1000,
+    }).addTo(map).bindPopup(`<div style="padding:8px 12px;font-size:13px;font-weight:600;">📍 ${input}</div>`);
+
+    homeCircle = L.circle(latlng, {
+      radius: 10000, color: '#4f7cff', weight: 1.5,
+      fillColor: '#4f7cff', fillOpacity: .06,
+    }).addTo(map);
+
+    map.setView(latlng, 11, { animate: true });
+    status.textContent = '✅ 表示しました';
+    status.className = 'ok';
+    render();
+
+  } catch(e) {
+    status.textContent = '❌ ' + e.message;
+    status.className = 'error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '地図で表示';
+  }
+});
+
+document.getElementById('addr-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addr-btn').click();
+});
+
+// ── Load CSV ─────────────────────────────────────────────────────────────
+fetch(CSV_URL + '&t=' + Date.now())
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  })
+  .then(csvText => {
+    const result = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    const data = result.data;
+    allData = data.map((row, i) => ({ ...row, _id: String(row['ID'] || i) }));
+
+    allData.forEach(row => {
+      const lat = parseFloat(row['Latitude']);
+      const lng = parseFloat(row['Longitude']);
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      const marker = L.marker([lat, lng], { icon: makeIcon(row['契約状態']) })
+        .bindPopup(popupHTML(row), { maxWidth: 300 });
+
+      marker.on('click', () => {
+        activeId = row._id;
+        render();
+        setTimeout(() => {
+          const el = document.querySelector(`.list-item[data-id="${row._id}"]`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50);
+      });
+
+      marker.addTo(map);
+      markers[row._id] = marker;
+    });
+
+    render();
+    document.getElementById('loading').classList.add('hide');
+  })
+  .catch(err => {
+    document.getElementById('loading').innerHTML =
+      `<p style="color:#f87171">データ読み込み失敗：${err.message}</p>`;
+  });
+
+// ── Keyword search ────────────────────────────────────────────────────────
+document.getElementById('kw-search').addEventListener('input', e => {
+  activeKw = e.target.value.trim();
+  render();
+});
+
+// ── Filter buttons ────────────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.status;
+    render();
+  });
+});
+</script>
+</body>
+</html>
