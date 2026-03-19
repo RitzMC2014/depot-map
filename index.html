@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>バス会社営業所マップ</title>
+  <title>営業所マップ</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -24,7 +24,7 @@
       --c-none:   #94a3b8;
       --c-stop:   #f87171;
       --header-h: 104px;
-      --drawer-peek: 72px; /* how much drawer peeks above bottom */
+      --drawer-peek: 72px;
     }
 
     html, body {
@@ -34,16 +34,12 @@
       overflow: hidden; -webkit-tap-highlight-color: transparent;
     }
 
-    /* ══════════════════════════════════════════
-       HEADER
-    ══════════════════════════════════════════ */
+    /* ══ HEADER ══════════════════════════════════════ */
     header {
       position: fixed; top: 0; left: 0; right: 0;
       background: var(--surface); border-bottom: 1px solid var(--border);
       z-index: 1000; padding: 0 16px;
     }
-
-    /* Row 1 */
     .header-row1 {
       height: 52px; display: flex; align-items: center; gap: 10px;
       border-bottom: 1px solid var(--border);
@@ -60,7 +56,9 @@
     .kw-wrap input:focus { border-color: var(--accent); }
     .kw-wrap .ico { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
 
-    /* Row 2 */
+    /* desktop filter group in header */
+    .header-filter-group { display: none; gap: 6px; margin-left: auto; }
+
     .header-row2 {
       height: 48px; display: flex; align-items: center; gap: 8px;
     }
@@ -77,48 +75,35 @@
     #addr-btn {
       padding: 8px 14px; background: var(--accent); color: #fff;
       border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
-      cursor: pointer; white-space: nowrap; flex-shrink: 0;
-      -webkit-appearance: none;
+      cursor: pointer; white-space: nowrap; flex-shrink: 0; -webkit-appearance: none;
     }
     #addr-btn:disabled { opacity: .45; }
 
-    #addr-status { font-size: 11px; color: var(--muted); white-space: nowrap; display: none; }
+    #addr-status { font-size: 11px; white-space: nowrap; display: none; }
     #addr-status.ok    { color: var(--c-signed); display: block; }
     #addr-status.error { color: var(--c-stop);   display: block; }
 
-    /* ══════════════════════════════════════════
-       LAYOUT
-    ══════════════════════════════════════════ */
-    .app {
-      position: fixed;
-      top: var(--header-h); left: 0; right: 0; bottom: 0;
-    }
+    /* ══ LAYOUT ══════════════════════════════════════ */
+    .app { position: fixed; top: var(--header-h); left: 0; right: 0; bottom: 0; }
 
-    /* ══════════════════════════════════════════
-       MAP
-    ══════════════════════════════════════════ */
-    #map {
-      position: absolute; inset: 0;
-    }
+    /* ══ MAP ══════════════════════════════════════════ */
+    #map { position: absolute; inset: 0; }
 
     .home-pin {
       width: 20px; height: 20px; background: var(--accent);
       border-radius: 50%; border: 3px solid #fff;
       box-shadow: 0 0 0 3px rgba(79,124,255,.4), 0 2px 8px rgba(0,0,0,.5);
     }
-
     .marker-pin {
       width: 26px; height: 26px; border-radius: 50% 50% 50% 0;
       transform: rotate(-45deg); border: 2px solid rgba(255,255,255,.25);
       box-shadow: 0 2px 8px rgba(0,0,0,.4);
     }
 
-    /* ══════════════════════════════════════════
-       FILTER BAR (floating above map)
-    ══════════════════════════════════════════ */
+    /* ══ FLOATING FILTER BAR (mobile) ════════════════ */
     .filter-bar {
       position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 6px; z-index: 500;
+      display: flex; gap: 5px; z-index: 500;
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 24px; padding: 5px 10px;
       box-shadow: 0 4px 16px rgba(0,0,0,.4);
@@ -127,11 +112,13 @@
     }
     .filter-bar::-webkit-scrollbar { display: none; }
 
+    /* ══ FILTER BUTTONS (shared) ═════════════════════ */
     .filter-btn {
-      padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
-      border: 1.5px solid transparent; cursor: pointer; transition: all .2s;
-      background: transparent; flex-shrink: 0;
+      padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      border: 1.5px solid transparent; cursor: pointer; transition: all .15s;
+      background: transparent; flex-shrink: 0; white-space: nowrap;
     }
+    /* contract status */
     .filter-btn[data-status="all"]      { border-color: var(--muted);    color: var(--muted); }
     .filter-btn[data-status="契約済"]   { border-color: var(--c-signed); color: var(--c-signed); }
     .filter-btn[data-status="商談中"]   { border-color: var(--c-talk);   color: var(--c-talk); }
@@ -143,18 +130,29 @@
     .filter-btn[data-status="未接触"].active   { background: var(--c-none);   color: #fff; }
     .filter-btn[data-status="取引停止"].active { background: var(--c-stop);   color: #fff; }
 
-    /* ══════════════════════════════════════════
-       DRAWER (bottom sheet)
-    ══════════════════════════════════════════ */
+    /* category */
+    .filter-btn[data-cat="all"]    { border-color: var(--muted); color: var(--muted); }
+    .filter-btn[data-cat="バス"]   { border-color: #60a5fa; color: #60a5fa; }
+    .filter-btn[data-cat="タクシー"] { border-color: #f59e0b; color: #f59e0b; }
+    .filter-btn[data-cat="トラック"] { border-color: #a78bfa; color: #a78bfa; }
+    .filter-btn[data-cat="all"].active      { background: var(--muted); color: #fff; }
+    .filter-btn[data-cat="バス"].active     { background: #60a5fa; color: #fff; }
+    .filter-btn[data-cat="タクシー"].active { background: #f59e0b; color: #fff; }
+    .filter-btn[data-cat="トラック"].active { background: #a78bfa; color: #fff; }
+
+    /* divider between filter groups */
+    .filter-divider {
+      width: 1px; background: var(--border); margin: 2px 4px; flex-shrink: 0;
+    }
+
+    /* ══ DRAWER ═══════════════════════════════════════ */
     .drawer {
       position: absolute; left: 0; right: 0; bottom: 0;
       background: var(--surface); border-top: 1px solid var(--border);
       border-radius: 16px 16px 0 0;
       box-shadow: 0 -8px 32px rgba(0,0,0,.4);
-      z-index: 600;
-      display: flex; flex-direction: column;
+      z-index: 600; display: flex; flex-direction: column;
       transition: transform .3s cubic-bezier(.32,.72,0,1);
-      /* default: peeking state */
       height: 75vh;
       transform: translateY(calc(75vh - var(--drawer-peek)));
     }
@@ -164,9 +162,7 @@
       padding: 10px 0 6px; cursor: pointer; flex-shrink: 0;
       display: flex; flex-direction: column; align-items: center; gap: 8px;
     }
-    .drawer-handle {
-      width: 36px; height: 4px; background: var(--border); border-radius: 2px;
-    }
+    .drawer-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; }
     .drawer-title-row {
       width: 100%; padding: 0 16px 8px;
       display: flex; justify-content: space-between; align-items: center;
@@ -183,8 +179,7 @@
 
     .list-item {
       padding: 13px 16px; border-bottom: 1px solid var(--border);
-      cursor: pointer; display: flex; align-items: flex-start; gap: 10px;
-      min-height: 56px; /* comfortable tap target */
+      cursor: pointer; display: flex; align-items: flex-start; gap: 10px; min-height: 56px;
     }
     .list-item.active { background: rgba(79,124,255,.14); }
 
@@ -194,34 +189,44 @@
     .dot.未接触   { background: var(--c-none); }
     .dot.取引停止 { background: var(--c-stop); }
 
-    .item-info { min-width: 0; }
-    .item-dist    { font-size: 10px; color: var(--accent); font-weight: 700; margin-bottom: 2px; }
+    .item-info { min-width: 0; flex: 1; }
+    .item-top { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+    .item-dist    { font-size: 10px; color: var(--accent); font-weight: 700; }
+    .item-cat     { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; }
+    .item-cat.バス     { background: rgba(96,165,250,.15); color: #60a5fa; }
+    .item-cat.タクシー { background: rgba(245,158,11,.15);  color: #f59e0b; }
+    .item-cat.トラック { background: rgba(167,139,250,.15); color: #a78bfa; }
     .item-company { font-size: 11px; color: var(--muted); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .item-name    { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .item-addr    { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .empty { padding: 40px 16px; text-align: center; color: var(--muted); font-size: 13px; }
 
-    /* ══════════════════════════════════════════
-       POPUP
-    ══════════════════════════════════════════ */
+    /* ══ POPUP ════════════════════════════════════════ */
     .leaflet-popup-content-wrapper {
       background: var(--surface) !important; border: 1px solid var(--border) !important;
       border-radius: 12px !important; box-shadow: 0 8px 32px rgba(0,0,0,.5) !important;
       color: var(--text) !important; padding: 0 !important;
     }
     .leaflet-popup-tip { background: var(--surface) !important; }
-    .leaflet-popup-content { margin: 0 !important; width: 260px !important; }
+    .leaflet-popup-content { margin: 0 !important; width: 264px !important; }
 
     .popup-inner { padding: 14px; }
+    .popup-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
     .popup-status {
-      display: inline-flex; align-items: center; gap: 5px;
-      font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px; margin-bottom: 8px;
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px;
     }
     .popup-status.契約済   { background: rgba(52,211,153,.15);  color: var(--c-signed); }
     .popup-status.商談中   { background: rgba(251,191,36,.15);   color: var(--c-talk); }
     .popup-status.未接触   { background: rgba(148,163,184,.15);  color: var(--c-none); }
     .popup-status.取引停止 { background: rgba(248,113,113,.15);  color: var(--c-stop); }
+    .popup-cat {
+      font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px;
+    }
+    .popup-cat.バス     { background: rgba(96,165,250,.15); color: #60a5fa; }
+    .popup-cat.タクシー { background: rgba(245,158,11,.15);  color: #f59e0b; }
+    .popup-cat.トラック { background: rgba(167,139,250,.15); color: #a78bfa; }
 
     .popup-company { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
     .popup-name    { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
@@ -230,54 +235,17 @@
 
     .popup-links { display: flex; gap: 6px; margin-bottom: 10px; }
     .popup-link {
-      flex: 1; padding: 9px 8px; border-radius: 8px; text-align: center;
-      font-size: 12px; font-weight: 600; text-decoration: none;
-      background: var(--bg); border: 1px solid var(--border);
-      color: var(--text);
+      flex: 1; padding: 9px 6px; border-radius: 8px; text-align: center;
+      font-size: 11px; font-weight: 600; text-decoration: none;
+      background: var(--bg); border: 1px solid var(--border); color: var(--text);
     }
+    .popup-link:hover { border-color: var(--accent); color: var(--accent); }
     .popup-link.disabled { opacity: .35; pointer-events: none; }
 
     .popup-memo { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.6; color: var(--muted); }
     .popup-memo-label { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
 
-    /* ══════════════════════════════════════════
-       DESKTOP SIDEBAR (≥768px)
-    ══════════════════════════════════════════ */
-    @media (min-width: 768px) {
-      :root { --header-h: 104px; }
-
-      .filter-bar { display: none; }
-
-      .drawer {
-        position: absolute; top: 0; left: 0; bottom: 0;
-        width: 320px; height: auto; border-radius: 0;
-        border-top: none; border-right: 1px solid var(--border);
-        transform: none !important;
-        box-shadow: none;
-      }
-      .drawer-handle-area { display: none; }
-      .drawer-title-row { padding: 14px 16px 10px; }
-
-      #map { left: 320px; }
-
-      /* Show filter buttons in header on desktop */
-      .header-row1 .filter-group { display: flex; }
-    }
-
-    @media (max-width: 767px) {
-      :root { --header-h: 104px; }
-      /* hide desktop filter group in header */
-      .header-row1 .filter-group { display: none; }
-    }
-
-    /* Desktop header filter group */
-    .header-row1 .filter-group {
-      display: flex; gap: 6px; margin-left: auto;
-    }
-
-    /* ══════════════════════════════════════════
-       LOADING
-    ══════════════════════════════════════════ */
+    /* ══ LOADING ══════════════════════════════════════ */
     #loading {
       position: fixed; inset: 0; background: var(--bg);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -291,6 +259,22 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     #loading p { font-size: 13px; color: var(--muted); }
+
+    /* ══ DESKTOP (≥768px) ════════════════════════════ */
+    @media (min-width: 768px) {
+      .filter-bar { display: none; }
+      .header-filter-group { display: flex; }
+
+      .drawer {
+        position: absolute; top: 0; left: 0; bottom: 0;
+        width: 320px; height: auto; border-radius: 0;
+        border-top: none; border-right: 1px solid var(--border);
+        transform: none !important; box-shadow: none;
+      }
+      .drawer-handle-area { display: none; }
+      .drawer-title-row { padding: 14px 16px 10px; }
+      #map { left: 320px; }
+    }
   </style>
 </head>
 <body>
@@ -300,22 +284,15 @@
   <p>データを読み込み中...</p>
 </div>
 
-<!-- ── HEADER ── -->
 <header>
   <div class="header-row1">
-    <h1>🚌 <span>バス会社</span>営業所マップ</h1>
+    <h1>🚌 <span>営業所</span>マップ</h1>
     <div class="kw-wrap">
       <span class="ico">🔍</span>
       <input id="kw-search" type="text" placeholder="会社名・営業所名" />
     </div>
-    <!-- desktop only filters -->
-    <div class="filter-group">
-      <button class="filter-btn active" data-status="all">すべて</button>
-      <button class="filter-btn" data-status="契約済">契約済</button>
-      <button class="filter-btn" data-status="商談中">商談中</button>
-      <button class="filter-btn" data-status="未接触">未接触</button>
-      <button class="filter-btn" data-status="取引停止">取引停止</button>
-    </div>
+    <!-- desktop: status + category filters -->
+    <div class="header-filter-group" id="header-filters"></div>
   </div>
   <div class="header-row2">
     <div class="addr-wrap">
@@ -327,22 +304,13 @@
   </div>
 </header>
 
-<!-- ── APP ── -->
 <div class="app">
-
-  <!-- Map -->
   <div id="map"></div>
 
-  <!-- Mobile: floating filter bar -->
-  <div class="filter-bar">
-    <button class="filter-btn active" data-status="all">すべて</button>
-    <button class="filter-btn" data-status="契約済">契約済</button>
-    <button class="filter-btn" data-status="商談中">商談中</button>
-    <button class="filter-btn" data-status="未接触">未接触</button>
-    <button class="filter-btn" data-status="取引停止">取引停止</button>
-  </div>
+  <!-- mobile floating filter bar -->
+  <div class="filter-bar" id="mobile-filters"></div>
 
-  <!-- Drawer (sidebar on desktop, bottom sheet on mobile) -->
+  <!-- drawer -->
   <div class="drawer" id="drawer">
     <div class="drawer-handle-area" id="drawer-handle">
       <div class="drawer-handle"></div>
@@ -353,11 +321,13 @@
     </div>
     <div class="list" id="list"></div>
   </div>
-
 </div>
 
 <script>
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/1WEmuM_V13bgh-mtX2MP90uajWLkeo4PLex8-5nN58KE/gviz/tq?tqx=out:csv&sheet=Data';
+// ── Config ────────────────────────────────────────────────────────────────
+const SPREADSHEET_ID = '1WEmuM_V13bgh-mtX2MP90uajWLkeo4PLex8-5nN58KE';
+const URL_COMPANIES  = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Companies`;
+const URL_DEPOT      = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Depot`;
 
 const STATUS_COLOR = {
   '契約済':   '#34d399',
@@ -366,7 +336,7 @@ const STATUS_COLOR = {
   '取引停止': '#f87171',
 };
 
-// ── Map ──────────────────────────────────────────────────────────────────
+// ── Map ───────────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: false }).setView([36.5, 136.0], 6);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -375,44 +345,72 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 // ── State ─────────────────────────────────────────────────────────────────
-let allData      = [];
+let allData      = []; // merged: depot + company fields
 let markers      = {};
-let activeFilter = 'all';
+let activeFilter = 'all';  // contract status
+let activeCat    = 'all';  // category
 let activeKw     = '';
 let activeId     = null;
 let homeLatLng   = null;
 let homeMarker   = null;
 let homeCircle   = null;
 
-// ── Drawer (mobile bottom sheet) ─────────────────────────────────────────
+// ── Drawer ────────────────────────────────────────────────────────────────
 const drawer = document.getElementById('drawer');
-const drawerHandle = document.getElementById('drawer-handle');
 let drawerOpen = false;
-
-function toggleDrawer() {
-  drawerOpen = !drawerOpen;
-  drawer.classList.toggle('open', drawerOpen);
+function setDrawer(open) {
+  drawerOpen = open;
+  drawer.classList.toggle('open', open);
 }
+document.getElementById('drawer-handle').addEventListener('click', () => setDrawer(!drawerOpen));
+map.on('click', () => { if (window.innerWidth < 768 && drawerOpen) setDrawer(false); });
 
-// tap handle to toggle
-drawerHandle.addEventListener('click', toggleDrawer);
-
-// close drawer when map is tapped on mobile
-map.on('click', () => {
-  if (window.innerWidth < 768 && drawerOpen) {
-    drawerOpen = false;
-    drawer.classList.remove('open');
-  }
-});
-
-// drag-to-dismiss
 let dragStartY = 0;
-drawerHandle.addEventListener('touchstart', e => { dragStartY = e.touches[0].clientY; }, { passive: true });
-drawerHandle.addEventListener('touchend', e => {
-  const delta = e.changedTouches[0].clientY - dragStartY;
-  if (delta > 40)  { drawerOpen = false; drawer.classList.remove('open'); }
-  if (delta < -40) { drawerOpen = true;  drawer.classList.add('open'); }
+document.getElementById('drawer-handle').addEventListener('touchstart', e => { dragStartY = e.touches[0].clientY; }, { passive: true });
+document.getElementById('drawer-handle').addEventListener('touchend', e => {
+  const d = e.changedTouches[0].clientY - dragStartY;
+  if (d > 40) setDrawer(false);
+  if (d < -40) setDrawer(true);
 }, { passive: true });
+
+// ── Build filter buttons ──────────────────────────────────────────────────
+function buildFilters() {
+  const statusBtns = `
+    <button class="filter-btn active" data-status="all">すべて</button>
+    <button class="filter-btn" data-status="契約済">契約済</button>
+    <button class="filter-btn" data-status="商談中">商談中</button>
+    <button class="filter-btn" data-status="未接触">未接触</button>
+    <button class="filter-btn" data-status="取引停止">取引停止</button>
+  `;
+  const catBtns = `
+    <button class="filter-btn active" data-cat="all">全業種</button>
+    <button class="filter-btn" data-cat="バス">🚌 バス</button>
+    <button class="filter-btn" data-cat="タクシー">🚕 タクシー</button>
+    <button class="filter-btn" data-cat="トラック">🚚 トラック</button>
+  `;
+  const divider = '<div class="filter-divider"></div>';
+
+  document.getElementById('mobile-filters').innerHTML = statusBtns + divider + catBtns;
+  document.getElementById('header-filters').innerHTML = statusBtns + divider + catBtns;
+
+  document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`.filter-btn[data-status="${btn.dataset.status}"]`).forEach(b => b.classList.add('active'));
+      document.querySelectorAll(`.filter-btn[data-status]:not([data-status="${btn.dataset.status}"])`).forEach(b => b.classList.remove('active'));
+      activeFilter = btn.dataset.status;
+      render();
+    });
+  });
+
+  document.querySelectorAll('.filter-btn[data-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`.filter-btn[data-cat="${btn.dataset.cat}"]`).forEach(b => b.classList.add('active'));
+      document.querySelectorAll(`.filter-btn[data-cat]:not([data-cat="${btn.dataset.cat}"])`).forEach(b => b.classList.remove('active'));
+      activeCat = btn.dataset.cat;
+      render();
+    });
+  });
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function makeIcon(status) {
@@ -420,43 +418,49 @@ function makeIcon(status) {
   return L.divIcon({
     className: '',
     html: `<div class="marker-pin" style="background:${color}"></div>`,
-    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -28],
+    iconSize: [26,26], iconAnchor: [13,26], popupAnchor: [0,-28],
   });
 }
 
 function haversineKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
   const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
-
-function distLabel(km) {
-  return km < 1 ? `${Math.round(km*1000)} m` : `${km.toFixed(1)} km`;
-}
+function distLabel(km) { return km < 1 ? `${Math.round(km*1000)} m` : `${km.toFixed(1)} km`; }
 
 // ── Popup ─────────────────────────────────────────────────────────────────
 function popupHTML(row) {
   const addr = [row['郵便番号'] ? '〒'+row['郵便番号'] : '', row['住所']].filter(Boolean).join(' ');
+
+  // 求人原稿：営業所固有 > 会社レベル
+  const recruitUrl = row['depot_求人原稿'] || row['co_求人原稿'];
   const site = row['公式サイト']
     ? `<a class="popup-link" href="${row['公式サイト']}" target="_blank" rel="noopener">🌐 公式サイト</a>`
     : `<span class="popup-link disabled">🌐 公式サイト</span>`;
-  const recruit = row['採用ページ']
-    ? `<a class="popup-link" href="${row['採用ページ']}" target="_blank" rel="noopener">📋 採用ページ</a>`
-    : `<span class="popup-link disabled">📋 採用ページ</span>`;
-  const memo = row['メモ']
-    ? `<div class="popup-memo"><div class="popup-memo-label">メモ</div>${row['メモ']}</div>` : '';
+  const recruit = recruitUrl
+    ? `<a class="popup-link" href="${recruitUrl}" target="_blank" rel="noopener">📋 求人原稿</a>`
+    : `<span class="popup-link disabled">📋 求人原稿</span>`;
+
+  // メモ：営業所 + 会社の両方を表示
+  const memoText = [row['depot_メモ'], row['co_メモ']].filter(Boolean).join(' / ');
+  const memo = memoText
+    ? `<div class="popup-memo"><div class="popup-memo-label">メモ</div>${memoText}</div>` : '';
 
   let distHtml = '';
   if (homeLatLng) {
     const lat = parseFloat(row['Latitude']), lng = parseFloat(row['Longitude']);
-    if (!isNaN(lat) && !isNaN(lng)) {
+    if (!isNaN(lat) && !isNaN(lng))
       distHtml = `<div class="popup-dist">📍 ${distLabel(haversineKm(homeLatLng.lat, homeLatLng.lng, lat, lng))}</div>`;
-    }
   }
 
+  const cat = row['カテゴリ'] || '';
+
   return `<div class="popup-inner">
-    <div class="popup-status ${row['契約状態']}"><span>●</span>${row['契約状態']||'未設定'}</div>
+    <div class="popup-top">
+      <span class="popup-status ${row['契約状態']}">● ${row['契約状態']||'未設定'}</span>
+      ${cat ? `<span class="popup-cat ${cat}">${cat}</span>` : ''}
+    </div>
     <div class="popup-company">${row['会社名']||''}</div>
     <div class="popup-name">${row['営業所名']||'（名称不明）'}</div>
     <div class="popup-addr">${addr}</div>
@@ -466,23 +470,24 @@ function popupHTML(row) {
   </div>`;
 }
 
-// ── Filter & sort ─────────────────────────────────────────────────────────
+// ── Filter ────────────────────────────────────────────────────────────────
 function filtered() {
   let rows = allData.filter(row => {
     const matchStatus = activeFilter === 'all' || row['契約状態'] === activeFilter;
+    const matchCat    = activeCat === 'all' || row['カテゴリ'] === activeCat;
     const q = activeKw.toLowerCase();
     const matchKw = !q ||
       (row['会社名']||'').toLowerCase().includes(q) ||
       (row['営業所名']||'').toLowerCase().includes(q);
-    return matchStatus && matchKw &&
+    return matchStatus && matchCat && matchKw &&
       !isNaN(parseFloat(row['Latitude'])) && !isNaN(parseFloat(row['Longitude']));
   });
 
   if (homeLatLng) {
-    rows = rows.map(row => ({
-      ...row,
-      _km: haversineKm(homeLatLng.lat, homeLatLng.lng, parseFloat(row['Latitude']), parseFloat(row['Longitude']))
-    })).sort((a, b) => a._km - b._km);
+    rows = rows.map(r => ({
+      ...r,
+      _km: haversineKm(homeLatLng.lat, homeLatLng.lng, parseFloat(r['Latitude']), parseFloat(r['Longitude']))
+    })).sort((a,b) => a._km - b._km);
   }
   return rows;
 }
@@ -496,13 +501,16 @@ function render() {
   if (rows.length === 0) {
     list.innerHTML = '<div class="empty">該当する営業所がありません</div>';
   } else {
+    const cat = row => row['カテゴリ'] || '';
     list.innerHTML = rows.map(row => {
       const distHtml = (homeLatLng && row._km != null)
-        ? `<div class="item-dist">📍 ${distLabel(row._km)}</div>` : '';
-      return `<div class="list-item${row._id === activeId ? ' active' : ''}" data-id="${row._id}">
+        ? `<span class="item-dist">📍 ${distLabel(row._km)}</span>` : '';
+      const catHtml = cat(row)
+        ? `<span class="item-cat ${cat(row)}">${cat(row)}</span>` : '';
+      return `<div class="list-item${row._id === activeId ? ' active':''}" data-id="${row._id}">
         <div class="dot ${row['契約状態']}"></div>
         <div class="item-info">
-          ${distHtml}
+          <div class="item-top">${distHtml}${catHtml}</div>
           <div class="item-company">${row['会社名']||''}</div>
           <div class="item-name">${row['営業所名']||'（名称不明）'}</div>
           <div class="item-addr">${row['住所']||''}</div>
@@ -513,11 +521,7 @@ function render() {
     list.querySelectorAll('.list-item').forEach(el => {
       el.addEventListener('click', () => {
         focusMarker(el.dataset.id);
-        // close drawer on mobile after selecting
-        if (window.innerWidth < 768) {
-          drawerOpen = false;
-          drawer.classList.remove('open');
-        }
+        if (window.innerWidth < 768) setDrawer(false);
       });
     });
   }
@@ -561,30 +565,19 @@ document.getElementById('addr-btn').addEventListener('click', async () => {
   const status = document.getElementById('addr-status');
   btn.disabled = true; btn.textContent = '検索中...';
   status.textContent = ''; status.className = '';
-
   try {
     homeLatLng = await geocodeAddress(input);
     if (homeMarker) map.removeLayer(homeMarker);
     if (homeCircle) map.removeLayer(homeCircle);
-
     homeMarker = L.marker(homeLatLng, {
-      icon: L.divIcon({ className: '', html: '<div class="home-pin"></div>', iconSize: [20,20], iconAnchor: [10,10] }),
+      icon: L.divIcon({ className:'', html:'<div class="home-pin"></div>', iconSize:[20,20], iconAnchor:[10,10] }),
       zIndexOffset: 1000,
     }).addTo(map).bindPopup(`<div style="padding:8px 12px;font-size:13px;font-weight:600;">📍 ${input}</div>`);
-
-    homeCircle = L.circle(homeLatLng, {
-      radius: 10000, color: '#4f7cff', weight: 1.5, fillColor: '#4f7cff', fillOpacity: .06,
-    }).addTo(map);
-
+    homeCircle = L.circle(homeLatLng, { radius:10000, color:'#4f7cff', weight:1.5, fillColor:'#4f7cff', fillOpacity:.06 }).addTo(map);
     map.setView(homeLatLng, 11, { animate: true });
     status.textContent = '✅ 表示済み'; status.className = 'ok';
     render();
-
-    // open drawer to show sorted results on mobile
-    if (window.innerWidth < 768) {
-      drawerOpen = true;
-      drawer.classList.add('open');
-    }
+    if (window.innerWidth < 768) setDrawer(true);
   } catch(e) {
     status.textContent = '❌ ' + e.message; status.className = 'error';
   } finally {
@@ -596,61 +589,91 @@ document.getElementById('addr-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('addr-btn').click();
 });
 
-// ── Load CSV ──────────────────────────────────────────────────────────────
-fetch(CSV_URL + '&t=' + Date.now())
-  .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.text(); })
-  .then(csvText => {
-    const { data } = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    allData = data.map((row, i) => ({ ...row, _id: String(row['ID'] || i) }));
-
-    allData.forEach(row => {
-      const lat = parseFloat(row['Latitude']), lng = parseFloat(row['Longitude']);
-      if (isNaN(lat) || isNaN(lng)) return;
-
-      const marker = L.marker([lat, lng], { icon: makeIcon(row['契約状態']) })
-        .bindPopup(popupHTML(row), { maxWidth: 280 });
-
-      marker.on('click', () => {
-        activeId = row._id; render();
-        setTimeout(() => {
-          const el = document.querySelector(`.list-item[data-id="${row._id}"]`);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 50);
-        // open drawer on mobile when marker tapped
-        if (window.innerWidth < 768) {
-          drawerOpen = true; drawer.classList.add('open');
-        }
-      });
-
-      marker.addTo(map);
-      markers[row._id] = marker;
-    });
-
-    render();
-    document.getElementById('loading').classList.add('hide');
-  })
-  .catch(err => {
-    document.getElementById('loading').innerHTML =
-      `<p style="color:#f87171">データ読み込み失敗：${err.message}</p>`;
-  });
-
-// ── Filters ───────────────────────────────────────────────────────────────
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    // sync all filter buttons (both header and floating bar)
-    document.querySelectorAll(`.filter-btn[data-status="${btn.dataset.status}"]`)
-      .forEach(b => b.classList.add('active'));
-    document.querySelectorAll(`.filter-btn:not([data-status="${btn.dataset.status}"])`)
-      .forEach(b => b.classList.remove('active'));
-    activeFilter = btn.dataset.status;
-    render();
-  });
+document.getElementById('kw-search').addEventListener('input', e => {
+  activeKw = e.target.value.trim(); render();
 });
 
-// ── Keyword search ────────────────────────────────────────────────────────
-document.getElementById('kw-search').addEventListener('input', e => {
-  activeKw = e.target.value.trim();
+// ── Load & merge two sheets ───────────────────────────────────────────────
+async function loadData() {
+  const ts = '&t=' + Date.now();
+
+  const [compRes, depotRes] = await Promise.all([
+    fetch(URL_COMPANIES + ts),
+    fetch(URL_DEPOT + ts),
+  ]);
+
+  if (!compRes.ok)  throw new Error(`Companies HTTP ${compRes.status}`);
+  if (!depotRes.ok) throw new Error(`Depot HTTP ${depotRes.status}`);
+
+  const compCsv  = await compRes.text();
+  const depotCsv = await depotRes.text();
+
+  const companies = Papa.parse(compCsv,  { header: true, skipEmptyLines: true }).data;
+  const depots    = Papa.parse(depotCsv, { header: true, skipEmptyLines: true }).data;
+
+  // Build company lookup map: CompanyID → company row
+  const compMap = {};
+  companies.forEach(c => {
+    const id = String(c['CompanyID'] || '').trim();
+    if (id) compMap[id] = c;
+  });
+
+  // Merge depot rows with company data
+  allData = depots.map((depot, i) => {
+    const companyId = String(depot['CompanyID'] || '').trim();
+    const company   = compMap[companyId] || {};
+    return {
+      _id:            String(depot['DepotID'] || i),
+      // depot fields
+      'DepotID':      depot['DepotID'],
+      'CompanyID':    companyId,
+      '営業所名':     depot['営業所名'],
+      '郵便番号':     depot['郵便番号'],
+      '住所':         depot['住所'],
+      'Latitude':     depot['Latitude'],
+      'Longitude':    depot['Longitude'],
+      'depot_メモ':   depot['メモ'],
+      'depot_求人原稿': depot['求人原稿'],
+      // company fields
+      '会社名':       company['会社名']   || '',
+      'カテゴリ':     company['カテゴリ'] || '',
+      '契約状態':     company['契約状態'] || '',
+      '公式サイト':   company['公式サイト'] || '',
+      'co_求人原稿':  company['求人原稿'] || '',
+      'co_メモ':      company['メモ']     || '',
+    };
+  });
+
+  // Create markers
+  allData.forEach(row => {
+    const lat = parseFloat(row['Latitude']), lng = parseFloat(row['Longitude']);
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const marker = L.marker([lat, lng], { icon: makeIcon(row['契約状態']) })
+      .bindPopup(popupHTML(row), { maxWidth: 280 });
+
+    marker.on('click', () => {
+      activeId = row._id; render();
+      setTimeout(() => {
+        const el = document.querySelector(`.list-item[data-id="${row._id}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+      if (window.innerWidth < 768) setDrawer(true);
+    });
+
+    marker.addTo(map);
+    markers[row._id] = marker;
+  });
+
   render();
+  document.getElementById('loading').classList.add('hide');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+buildFilters();
+loadData().catch(err => {
+  document.getElementById('loading').innerHTML =
+    `<p style="color:#f87171">データ読み込み失敗：${err.message}</p>`;
 });
 </script>
 </body>
