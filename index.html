@@ -608,8 +608,19 @@ async function loadData() {
   const compCsv  = await compRes.text();
   const depotCsv = await depotRes.text();
 
-  const companies = Papa.parse(compCsv,  { header: true, skipEmptyLines: true }).data;
-  const depots    = Papa.parse(depotCsv, { header: true, skipEmptyLines: true }).data;
+  // ヘッダーのキーを正規化（余分なスペース・引用符を除去）
+  function normalizeKeys(rows) {
+    return rows.map(row => {
+      const normalized = {};
+      Object.keys(row).forEach(k => {
+        normalized[k.trim().replace(/^"+|"+$/g, '')] = row[k];
+      });
+      return normalized;
+    });
+  }
+
+  const companies = normalizeKeys(Papa.parse(compCsv,  { header: true, skipEmptyLines: true }).data);
+  const depots    = normalizeKeys(Papa.parse(depotCsv, { header: true, skipEmptyLines: true }).data);
 
   // Build company lookup map: CompanyID → company row
   const compMap = {};
