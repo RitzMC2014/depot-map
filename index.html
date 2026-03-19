@@ -320,7 +320,7 @@ function popupHTML(row) {
 
   let distHtml = '';
   if (homeLatLng) {
-    const lat = parseFloat(row['緯度']), lng = parseFloat(row['経度']);
+    const lat = parseFloat(row['Latitude']), lng = parseFloat(row['Longitude']);
     if (!isNaN(lat) && !isNaN(lng)) {
       const km = haversineKm(homeLatLng.lat, homeLatLng.lng, lat, lng);
       distHtml = `<div class="popup-dist">📍 求職者住所から ${distLabel(km)}</div>`;
@@ -346,14 +346,14 @@ function filtered() {
     const matchKw = !q ||
       (row['会社名']||'').toLowerCase().includes(q) ||
       (row['営業所名']||'').toLowerCase().includes(q);
-    const hasCoords = !isNaN(parseFloat(row['緯度'])) && !isNaN(parseFloat(row['経度']));
+    const hasCoords = !isNaN(parseFloat(row['Latitude'])) && !isNaN(parseFloat(row['Longitude']));
     return matchStatus && matchKw && hasCoords;
   });
 
   if (homeLatLng) {
     rows = rows.map(row => ({
       ...row,
-      _km: haversineKm(homeLatLng.lat, homeLatLng.lng, parseFloat(row['緯度']), parseFloat(row['経度']))
+      _km: haversineKm(homeLatLng.lat, homeLatLng.lng, parseFloat(row['Latitude']), parseFloat(row['Longitude']))
     })).sort((a, b) => a._km - b._km);
   }
 
@@ -492,8 +492,8 @@ fetch(CSV_URL)
     allData = data.map((row, i) => ({ ...row, _id: String(row['ID'] || i) }));
 
     allData.forEach(row => {
-      const lat = parseFloat(row['緯度']);
-      const lng = parseFloat(row['経度']);
+      const lat = parseFloat(row['Latitude']);
+      const lng = parseFloat(row['Longitude']);
       if (isNaN(lat) || isNaN(lng)) return;
 
       const marker = L.marker([lat, lng], { icon: makeIcon(row['契約状態']) })
