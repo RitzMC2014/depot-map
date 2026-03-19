@@ -481,7 +481,7 @@ document.getElementById('addr-input').addEventListener('keydown', e => {
 });
 
 // ── Load CSV ─────────────────────────────────────────────────────────────
-fetch(CSV_URL)
+fetch(CSV_URL + '&t=' + Date.now())
   .then(res => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.text();
