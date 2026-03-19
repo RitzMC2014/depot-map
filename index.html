@@ -190,14 +190,14 @@
     .dot.取引停止 { background: var(--c-stop); }
 
     .item-info { min-width: 0; flex: 1; }
-    .item-top { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+    .item-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
     .item-dist    { font-size: 10px; color: var(--accent); font-weight: 700; }
     .item-cat     { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; }
     .item-cat.バス     { background: rgba(96,165,250,.15); color: #60a5fa; }
     .item-cat.タクシー { background: rgba(245,158,11,.15);  color: #f59e0b; }
     .item-cat.トラック { background: rgba(167,139,250,.15); color: #a78bfa; }
-    .item-company { font-size: 11px; color: var(--muted); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .item-name    { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-company { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-name    { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .item-addr    { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .empty { padding: 40px 16px; text-align: center; color: var(--muted); font-size: 13px; }
@@ -431,7 +431,7 @@ function distLabel(km) { return km < 1 ? `${Math.round(km*1000)} m` : `${km.toFi
 
 // ── Popup ─────────────────────────────────────────────────────────────────
 function popupHTML(row) {
-  const addr = [row['郵便番号'] ? '〒'+row['郵便番号'] : '', row['Address']].filter(Boolean).join(' ');
+  const addr = [row['郵便番号'] || '', row['Address']].filter(Boolean).join(' ');
 
   // 求人原稿：営業所固有 > 会社レベル
   const recruitUrl = row['depot_求人原稿'] || row['co_求人原稿'];
