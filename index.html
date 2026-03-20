@@ -541,24 +541,14 @@ function focusMarker(id) {
   const marker = markers[id];
   if (!marker) return;
 
-  const latlng = marker.getLatLng();
-  const currentZoom = map.getZoom();
-  const zoom = Math.max(currentZoom, 14);
+  // マーカーを画面の正中央に表示
+  map.setView(marker.getLatLng(), 14, { animate: true });
 
-  // ポップアップを先に開いてサイズを確定させる
-  marker.openPopup();
-
-  // ポップアップの高さ分だけ上にオフセットして中央に表示
-  map.once('zoomend moveend', () => {
-    const popupEl = marker.getPopup() && marker.getPopup().getElement
-      ? marker.getPopup().getElement()
-      : null;
-    const offsetY = popupEl ? -(popupEl.offsetHeight / 2 + 20) : -80;
-
-    map.panBy([0, offsetY], { animate: true, duration: 0.3 });
+  // setView完了後にポップアップを開く
+  map.once('moveend', () => {
+    marker.openPopup();
   });
 
-  map.setView(latlng, zoom, { animate: true });
   render();
   setTimeout(() => {
     const el = document.querySelector(`.list-item[data-id="${id}"]`);
