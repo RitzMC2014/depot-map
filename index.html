@@ -555,12 +555,18 @@ function focusMarker(id) {
       marker.openPopup();
     });
   } else {
-    // デスクトップ：サイドバー幅の半分だけ右にずらして地図エリアの中央に配置
+    // デスクトップ：地図エリア（全体幅 - サイドバー320px）の中央にマーカーを配置
     const sidebarW = 320;
-    const targetPoint = map.project(latlng, 14);
-    targetPoint.x -= sidebarW / 2;
-    const targetLatLng = map.unproject(targetPoint, 14);
-    map.setView(targetLatLng, 14, { animate: true });
+    const mapSize  = map.getSize();          // 地図全体のピクセルサイズ
+    // 地図エリアの中心X = サイドバー幅 + 地図エリア幅 / 2
+    // setViewはmap全体の中心を基準にするため、
+    // 「地図エリア中心 - map全体中心」分だけXをずらす
+    const offsetX  = sidebarW / 2;          // 正方向（右）にずらす
+    const zoom     = 14;
+    const targetPoint = map.project(latlng, zoom);
+    targetPoint.x += offsetX;
+    const targetLatLng = map.unproject(targetPoint, zoom);
+    map.setView(targetLatLng, zoom, { animate: true });
     map.once('moveend', () => {
       marker.openPopup();
     });
