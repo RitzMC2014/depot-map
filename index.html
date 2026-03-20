@@ -541,13 +541,30 @@ function focusMarker(id) {
   const marker = markers[id];
   if (!marker) return;
 
-  // マーカーを画面の正中央に表示
-  map.setView(marker.getLatLng(), 14, { animate: true });
+  const latlng = marker.getLatLng();
+  const isMobile = window.innerWidth < 768;
 
-  // setView完了後にポップアップを開く
-  map.once('moveend', () => {
-    marker.openPopup();
-  });
+  // デスクトップ：サイドバー(320px)分右にオフセットして地図エリアの中央に表示
+  // モバイル：ドロワー分上にオフセット
+  if (isMobile) {
+    // モバイル：画面中央より少し上に表示（ドロワーが下から出るため）
+    map.setView(latlng, 14, { animate: true });
+    map.once('moveend', () => {
+      const drawerPeek = 72; // --drawer-peek
+      map.panBy([0, drawerPeek / 2], { animate: false });
+      marker.openPopup();
+    });
+  } else {
+    // デスクトップ：サイドバー幅の半分だけ右にずらして地図エリアの中央に配置
+    const sidebarW = 320;
+    const targetPoint = map.project(latlng, 14);
+    targetPoint.x -= sidebarW / 2;
+    const targetLatLng = map.unproject(targetPoint, 14);
+    map.setView(targetLatLng, 14, { animate: true });
+    map.once('moveend', () => {
+      marker.openPopup();
+    });
+  }
 
   render();
   setTimeout(() => {
