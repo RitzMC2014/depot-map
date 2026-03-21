@@ -275,9 +275,52 @@
       .drawer-title-row { padding: 14px 16px 10px; }
       #map { left: 320px; }
     }
+
+    /* ══ PASSWORD SCREEN ══════════════════════════════════════ */
+    #password-screen {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 99999; flex-direction: column; gap: 24px;
+    }
+    #password-screen.hidden { display: none; }
+    .pw-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 40px 36px; width: 320px;
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+    .pw-title { font-size: 18px; font-weight: 700; color: var(--text); }
+    .pw-subtitle { font-size: 13px; color: var(--muted); margin-top: -12px; }
+    .pw-input {
+      width: 100%; padding: 10px 14px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 15px; outline: none; text-align: center;
+      letter-spacing: .1em;
+    }
+    .pw-input:focus { border-color: var(--accent); }
+    .pw-btn {
+      width: 100%; padding: 10px; background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+      cursor: pointer;
+    }
+    .pw-btn:hover { opacity: .85; }
+    .pw-error { font-size: 12px; color: var(--c-stop); display: none; }
+    .pw-error.show { display: block; }
   </style>
 </head>
 <body>
+
+
+<!-- ── PASSWORD SCREEN ── -->
+<div id="password-screen">
+  <div class="pw-box">
+    <div class="pw-title">🗺️ 営業所マップ</div>
+    <div class="pw-subtitle">社内専用システム</div>
+    <input id="pw-input" class="pw-input" type="password" placeholder="パスワードを入力" />
+    <button class="pw-btn" id="pw-btn">ログイン</button>
+    <div class="pw-error" id="pw-error">パスワードが正しくありません</div>
+  </div>
+</div>
 
 <div id="loading">
   <div class="spinner"></div>
@@ -324,6 +367,41 @@
 </div>
 
 <script>
+// ── Password Protection ──────────────────────────────────────────────────
+const PASSWORD_HASH = 'b10e1b962de3ba9fce79ada4a5dd2e5159520417b8b68c7ff801e8ecb7062318'; // SHA-256ハッシュ値
+
+async function hashPassword(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPassword() {
+  const input = document.getElementById('pw-input').value;
+  const hash  = await hashPassword(input);
+  if (hash === PASSWORD_HASH) {
+    sessionStorage.setItem('auth', hash);
+    document.getElementById('password-screen').classList.add('hidden');
+  } else {
+    document.getElementById('pw-error').classList.add('show');
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+// ページ読み込み時に認証チェック
+(async () => {
+  const stored = sessionStorage.getItem('auth');
+  if (stored && stored === PASSWORD_HASH) {
+    document.getElementById('password-screen').classList.add('hidden');
+  }
+})();
+
+document.getElementById('pw-btn').addEventListener('click', checkPassword);
+document.getElementById('pw-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPassword();
+  document.getElementById('pw-error').classList.remove('show');
+});
+
 // ── Config ────────────────────────────────────────────────────────────────
 const SPREADSHEET_ID = '1WEmuM_V13bgh-mtX2MP90uajWLkeo4PLex8-5nN58KE';
 const URL_COMPANIES  = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Companies`;
