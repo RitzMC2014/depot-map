@@ -555,10 +555,15 @@ function filtered() {
   let rows = allData.filter(row => {
     const matchStatus = activeFilter === 'all' || row['契約状態'] === activeFilter;
     const matchCat    = activeCat === 'all' || row['カテゴリ'] === activeCat;
-    const q = activeKw.toLowerCase();
+    // 全角→半角に正規化してから比較（BRT↔ＢＲＴ両対応）
+    const normalize = str => str
+      .toLowerCase()
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/　/g, ' ');
+    const q = normalize(activeKw);
     const matchKw = !q ||
-      (row['会社名']||'').toLowerCase().includes(q) ||
-      (row['営業所名']||'').toLowerCase().includes(q);
+      normalize(row['会社名']||'').includes(q) ||
+      normalize(row['営業所名']||'').includes(q);
     return matchStatus && matchCat && matchKw &&
       !isNaN(parseFloat(row['Latitude'])) && !isNaN(parseFloat(row['Longitude']));
   });
