@@ -732,11 +732,22 @@ async function loadData() {
   const companies = normalizeKeys(Papa.parse(compCsv,  { header: true, skipEmptyLines: true }).data);
   const depots    = normalizeKeys(Papa.parse(depotCsv, { header: true, skipEmptyLines: true }).data);
 
+  // 契約状態から絵文字・余分なスペースを除去して正規化
+  const STATUS_LABELS = ['契約済', '商談中', '未接触', '取引停止'];
+  function normalizeStatus(val) {
+    if (!val) return '';
+    const cleaned = String(val).replace(/[^\u0000-\u007F\u3000-\u9FFF\uF900-\uFAFF]/gu, '').trim();
+    return STATUS_LABELS.find(s => cleaned.includes(s)) || cleaned;
+  }
+
   // Build company lookup map: CompanyID → company row
   const compMap = {};
   companies.forEach(c => {
     const id = String(c['CompanyID'] || '').trim();
-    if (id) compMap[id] = c;
+    if (id) {
+      c['契約状態'] = normalizeStatus(c['契約状態']);
+      compMap[id] = c;
+    }
   });
 
   // Merge depot rows with company data
