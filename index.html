@@ -723,7 +723,12 @@ async function loadData() {
     return rows.map(row => {
       const normalized = {};
       Object.keys(row).forEach(k => {
-        normalized[k.trim().replace(/^"+|"+$/g, '')] = row[k];
+        // 半角・全角スペース、引用符、制御文字をすべて除去
+        const cleanKey = k
+          .replace(/^["'\s　]+|["'\s　]+$/g, '')  // 前後の引用符・スペース・全角スペース
+          .replace(/\s+/g, ' ')                              // 連続スペースを1つに
+          .trim();
+        if (cleanKey) normalized[cleanKey] = row[k];
       });
       return normalized;
     });
