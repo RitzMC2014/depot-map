@@ -470,25 +470,27 @@ function buildFilters() {
 
   document.getElementById('mobile-filters').innerHTML = statusBtns + divider + catBtns;
   document.getElementById('header-filters').innerHTML = statusBtns + divider + catBtns;
-
-  document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll(`.filter-btn[data-status="${btn.dataset.status}"]`).forEach(b => b.classList.add('active'));
-      document.querySelectorAll(`.filter-btn[data-status]:not([data-status="${btn.dataset.status}"])`).forEach(b => b.classList.remove('active'));
-      activeFilter = btn.dataset.status;
-      render();
-    });
-  });
-
-  document.querySelectorAll('.filter-btn[data-cat]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll(`.filter-btn[data-cat="${btn.dataset.cat}"]`).forEach(b => b.classList.add('active'));
-      document.querySelectorAll(`.filter-btn[data-cat]:not([data-cat="${btn.dataset.cat}"])`).forEach(b => b.classList.remove('active'));
-      activeCat = btn.dataset.cat;
-      render();
-    });
-  });
 }
+
+// ── Filter button event delegation（ページ全体で1回だけ登録）────────────
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+
+  if (btn.dataset.status !== undefined) {
+    document.querySelectorAll('.filter-btn[data-status]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll(`.filter-btn[data-status="${btn.dataset.status}"]`).forEach(b => b.classList.add('active'));
+    activeFilter = btn.dataset.status;
+    render();
+  }
+
+  if (btn.dataset.cat !== undefined) {
+    document.querySelectorAll('.filter-btn[data-cat]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll(`.filter-btn[data-cat="${btn.dataset.cat}"]`).forEach(b => b.classList.add('active'));
+    activeCat = btn.dataset.cat;
+    render();
+  }
+});
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function makeIcon(status) {
