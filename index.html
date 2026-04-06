@@ -535,12 +535,13 @@ function popupHTML(row) {
       distHtml = `<div class="popup-dist">📍 ${distLabel(haversineKm(homeLatLng.lat, homeLatLng.lng, lat, lng))}</div>`;
   }
 
-  const cat = row['カテゴリ'] || '';
+  // カテゴリが複数の場合（例：「バス、タクシー」）に対応
+  const cats = (row['カテゴリ'] || '').split(/[、,，]/).map(s => s.trim()).filter(Boolean);
 
   return `<div class="popup-inner">
     <div class="popup-top">
       <span class="popup-status ${row['契約状態']}">● ${row['契約状態']||'未設定'}</span>
-      ${cat ? `<span class="popup-cat ${cat}">${cat}</span>` : ''}
+      ${cats.map(c => `<span class="popup-cat ${c}">${c}</span>`).join('')}
     </div>
     <div class="popup-company">${row['会社名']||''}</div>
     <div class="popup-name">${row['営業所名']||'（名称不明）'}</div>
@@ -555,7 +556,7 @@ function popupHTML(row) {
 function filtered() {
   let rows = allData.filter(row => {
     const matchStatus = activeFilter === 'all' || row['契約状態'] === activeFilter;
-    const matchCat    = activeCat === 'all' || row['カテゴリ'] === activeCat;
+    const matchCat    = activeCat === 'all' || (row['カテゴリ'] || '').includes(activeCat);
     // 全角→半角に正規化してから比較（BRT↔ＢＲＴ両対応）
     const normalize = str => str
       .toLowerCase()
@@ -587,12 +588,12 @@ function render() {
   if (rows.length === 0) {
     list.innerHTML = '<div class="empty">該当する営業所がありません</div>';
   } else {
-    const cat = row => row['カテゴリ'] || '';
     list.innerHTML = rows.map(row => {
       const distHtml = (homeLatLng && row._km != null)
         ? `<span class="item-dist">📍 ${distLabel(row._km)}</span>` : '';
-      const catHtml = cat(row)
-        ? `<span class="item-cat ${cat(row)}">${cat(row)}</span>` : '';
+      // カテゴリが複数の場合に対応
+      const rowCats = (row['カテゴリ'] || '').split(/[、,，]/).map(s => s.trim()).filter(Boolean);
+      const catHtml = rowCats.map(c => `<span class="item-cat ${c}">${c}</span>`).join('');
       return `<div class="list-item${row._id === activeId ? ' active':''}" data-id="${row._id}">
         <div class="dot ${row['契約状態']}"></div>
         <div class="item-info">
